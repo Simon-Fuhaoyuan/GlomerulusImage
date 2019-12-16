@@ -18,7 +18,7 @@ from core.config import config
 from core.config import update_config
 from core.config import update_dir
 from core.config import get_model_name
-from core.loss import JointsMSELoss
+from core.loss import CELoss
 from core.function import train
 from core.function import validate
 from utils.utils import get_optimizer
@@ -119,9 +119,7 @@ def main():
     model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
 
     # define loss function (criterion) and optimizer
-    criterion = JointsMSELoss(
-        use_target_weight=config.LOSS.USE_TARGET_WEIGHT
-    ).cuda()
+    criterion = CELoss().cuda()
 
     optimizer = get_optimizer(config, model)
 

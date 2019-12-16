@@ -25,7 +25,7 @@ import _init_paths
 from core.config import config
 from core.config import update_config
 from core.config import update_dir
-from core.loss import JointsMSELoss
+from core.loss import CELoss
 from core.function import validate
 from utils.utils import create_logger
 from dataset.glomerulus import Glomerulus
@@ -132,9 +132,7 @@ def main():
     model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
 
     # define loss function (criterion) and optimizer
-    criterion = JointsMSELoss(
-        use_target_weight=config.LOSS.USE_TARGET_WEIGHT
-    ).cuda()
+    criterion = CELoss().cuda()
 
     # Data loading code
     #normalize = transforms.Normalize(mean=mean,
