@@ -32,17 +32,17 @@ class GradCAM(object):
         return grads
     
     def save(self, gcam, raw_image, id, category_id):
-        #gcam = cv2.applyColorMap(np.uint8(gcam * 255.0), cv2.COLORMAP_JET)
-        #gcam = gcam.astype(np.float)# + raw_image.astype(np.float)
-        #if(gcam.max() != 0):
-        #    gcam = gcam / gcam.max() * 255.0
+        gcam = cv2.applyColorMap(np.uint8(gcam * 255.0), cv2.COLORMAP_JET)
+        gcam = gcam.astype(np.float) + raw_image.astype(np.float)
+        if(gcam.max() != 0):
+           gcam = gcam / gcam.max() * 255.0
         output_dir = os.path.join(self.output_dir, self.subroot, 'gradcam')
-        filename = '/group%d_num_%d_cat%d.npy' %(self.group, id, category_id)
-        filename_init = '/group%d_num_%d.npy' %(self.group, id)
-        #cv2.imwrite(output_dir + filename, np.uint8(gcam))
-        #cv2.imwrite(output_dir + filename_init, np.uint8(raw_image))
-        np.save(output_dir + filename, gcam)
-        np.save(output_dir + filename_init, raw_image)
+        filename = '/group%d_num_%d_cat%d.png' %(self.group, id, category_id)
+        filename_init = '/group%d_num_%d.png' %(self.group, id)
+        cv2.imwrite(output_dir + filename, np.uint8(gcam))
+        cv2.imwrite(output_dir + filename_init, np.uint8(raw_image))
+        # np.save(output_dir + filename, gcam)
+        # np.save(output_dir + filename_init, raw_image)
 
     def generate(self):
         for i in range(self.fmaps.shape[0]): # batch size
@@ -56,9 +56,7 @@ class GradCAM(object):
                 fmap = self.fmaps[i][j]
                 grad = self.grads[category_id][j]
                 gcam += fmap * grad
-            #gcam = F.relu(Variable(gcam))
 
-            #gcam = gcam.data.cpu().numpy()
             gcam -= gcam.min()
             if(gcam.max() != 0):
                 gcam /= gcam.max()
