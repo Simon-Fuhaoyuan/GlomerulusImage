@@ -192,7 +192,7 @@ def main():
             'state_dict': model.state_dict(),
             'perf': perf_indicator,
             'optimizer': optimizer.state_dict(),
-        }, best_model, final_output_dir)
+        }, best_model, final_output_dir, epoch)
 
     final_model_state_file = os.path.join(final_output_dir,
                                           'final_state.pth.tar')
