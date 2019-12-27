@@ -7,6 +7,7 @@ import logging
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
@@ -213,13 +214,14 @@ class Block8(nn.Module):
 
 class InceptionResNetV2(nn.Module):
 
-    def __init__(self, num_classes=7):
+    def __init__(self, num_classes=7, is_train=False):
         super(InceptionResNetV2, self).__init__()
         # Special attributs
         self.input_space = None
         self.input_size = (299, 299, 3)
         self.mean = None
         self.std = None
+        self.is_train = True
         # Modules
         self.conv2d_1a = BasicConv2d(3, 32, kernel_size=3, stride=2)
         self.conv2d_2a = BasicConv2d(32, 32, kernel_size=3, stride=1)
@@ -234,36 +236,41 @@ class InceptionResNetV2(nn.Module):
         )
         self.mixed_6a = Mixed_6a()
         self.repeat_1 = nn.Sequential(
-            Block17(scale=0.50),
-            Block17(scale=0.50)
+            Block17(scale=1.0)
         )
-        self.mixed_7a = Mixed_7a()
-        self.repeat_2 = nn.Sequential(
-            Block8(scale=1.0)
-        )
-        self.conv2d_7b = BasicConv2d(2080, 1536, kernel_size=1, stride=1)
-        self.avgpool_1a = nn.AvgPool2d(8, count_include_pad=False)
+        # self.mixed_7a = Mixed_7a()
+        # self.repeat_2 = nn.Sequential(
+        #     Block8(scale=1.0)
+        # )
+        self.conv2d_7b = BasicConv2d(1088, 1536, kernel_size=1, stride=1)
+        self.globalMaxPooling = nn.AdaptiveMaxPool2d(1)
         self.fullyc = nn.Linear(1536, num_classes)
 
     def features(self, input):
         x = self.conv2d_1a(input)
         x = self.conv2d_2a(x)
+        x = F.dropout(x, p=0.3, training=self.is_train) # new dropout
         x = self.conv2d_2b(x)
         x = self.maxpool_3a(x)
         x = self.conv2d_3b(x)
+        x = F.dropout(x, p=0.3, training=self.is_train) # new dropout
         x = self.conv2d_4a(x)
         x = self.maxpool_5a(x)
         x = self.mixed_5b(x)
         x = self.repeat(x)
+        x = F.dropout(x, p=0.3, training=self.is_train) # new dropout
         x = self.mixed_6a(x)
         x = self.repeat_1(x)
-        x = self.mixed_7a(x)
-        x = self.repeat_2(x)
+        # x = self.mixed_7a(x)
+        # x = self.repeat_2(x)
         x = self.conv2d_7b(x)
+        # print(x.size())
         return x
 
     def logits(self, features):
-        x = self.avgpool_1a(features)
+        x = self.globalMaxPooling(features)
+        x = F.dropout(x, training=self.is_train)
+        # print(x.size())
         x = x.view(x.size(0), -1)
         x = self.fullyc(x)
         return x
@@ -272,8 +279,23 @@ class InceptionResNetV2(nn.Module):
         x_maps = self.features(input)
         x = self.logits(x_maps)
         return x
+    
+    def init_weights(self):
+        logger.info('=> Using kaiming initialization...')
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.xavier_normal_(m.weight)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
+            elif isinstance(m, nn.Linear):
+                nn.init.xavier_normal_(m.weight)
+                nn.init.constant_(m.bias, 0)
 
 def get_pose_net(cfg, is_train, **kwargs):
-    model = InceptionResNetV2(num_classes=7)
+    model = InceptionResNetV2(num_classes=7, is_train=is_train)
+    logger.info('=> This is LIRN!')
+    if is_train:
+        model.init_weights()
 
     return model
